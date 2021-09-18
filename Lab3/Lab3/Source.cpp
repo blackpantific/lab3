@@ -106,7 +106,7 @@ int main()
 	}
 
 
-	kernel = clCreateKernel(program, "matrix_local", &status);//ошибка обнаруживается тут
+	kernel = clCreateKernel(program, "matrix_global", &status);//ошибка обнаруживается тут
 	if (!kernel || status != CL_SUCCESS)
 	{
 		throw "Error: Failed to create compute kernel!\n";
@@ -180,12 +180,12 @@ int main()
 	//local_work_size[1] = localWorkSize;
 
 	//kernel3
-	local_work_size[0] = localWorkSize;
-	local_work_size[1] = localWorkSize;
+	//local_work_size[0] = localWorkSize;
+	//local_work_size[1] = localWorkSize;
 
 	cl_event ourEvent = 0;
 
-	status = clEnqueueNDRangeKernel(queue, kernel, dimentions, NULL, global_work_size, local_work_size, 0,
+	status = clEnqueueNDRangeKernel(queue, kernel, dimentions, NULL, global_work_size, NULL, 0,
 		NULL, &ourEvent);
 	if (status != CL_SUCCESS)
 	{
