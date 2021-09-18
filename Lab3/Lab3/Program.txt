@@ -40,28 +40,29 @@ kernel void matrix_local(global const float* a, global const float* b, global fl
 		local float locMatrA[2][2];//заменить 2 на ширину(она же высота) сабматрицы лок группы, т.е. A
 		local float locMatrB[2][2];//заменить 2 на ширину(она же высота) сабматрицы лок группы, т.е. B
 
-		//printf("\nlocal_x = %i, local_y = %i, global_x = %i, global_y = %i",
-		//local_x,
-		//local_y,
-		//global_x,
-		//global_y);
+		printf("\nlocal_x = %i, local_y = %i, global_x = %i, global_y = %i",
+		local_x,
+		local_y,
+		global_x,
+		global_y);
 
 		//for(int i = 0; i < 2; i++){//2 в данном случае это количество сабплиток умещающихся по ширине всей глобал работы, т.е 4 надо реплейснуть потом на константу
 		
-			locMatrA[local_x][local_y] = a[global_y * widthA + i];
-			locMatrB[local_x][local_y] = b[global_x + i * widthB];
+			locMatrA[local_x][local_y] = a[global_y * widthA];
+			locMatrB[local_x][local_y] = b[global_x + widthB];
 
 
-			printf("\nlocMatrA[%i][%i] = %f\nlocMatrB[%i][%i] = %f", 
+			printf("\nlocMatrA[%i][%i] = %f", 
 			local_x, 
 			local_y, 
-			a[global_y * widthA + i],
-			local_x, 
-			local_y, 
-			b[global_x + i * widthB]);
+			a[global_y * widthA ]//,
+			//local_x, 
+			//local_y, 
+			//b[global_x + widthB]
+			);
 
 
-			barrier(CLK_LOCAL_MEM_FENCE);
+			//barrier(CLK_LOCAL_MEM_FENCE);
 		//}
 
 		

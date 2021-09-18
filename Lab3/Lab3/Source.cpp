@@ -185,7 +185,7 @@ int main()
 
 	cl_event ourEvent = 0;
 
-	status = clEnqueueNDRangeKernel(queue, kernel, dimentions, NULL, global_work_size, NULL, 0,
+	status = clEnqueueNDRangeKernel(queue, kernel, dimentions, NULL, global_work_size, local_work_size, 0,
 		NULL, &ourEvent);
 	if (status != CL_SUCCESS)
 	{
