@@ -46,16 +46,16 @@ kernel void matrix_local(global const float* a, global const float* b, global fl
 		global_x,
 		global_y);
 
-		//for(int i = 0; i < 2; i++){//2 в данном случае это количество сабплиток умещающихся по ширине всей глобал работы, т.е 4 надо реплейснуть потом на константу
+		//for(int i = 0; i < 2; i++){//2 в данном случае это количество сабплиток умещающихся по ширине всей глобал работы, т.е 4 надо реплейснуть потом на константу. количество сабплиток это ширина итоговой матрицы делить на ширину лок. группы
 		
-			locMatrA[local_x][local_y] = a[global_y * widthA];
-			locMatrB[local_x][local_y] = b[global_x + widthB];
+			locMatrA[local_y][local_x] = a[global_y * widthA + global_x];
+			//locMatrB[local_y][local_x] = b[global_x + widthB * global_y];
 
 
 			printf("\nlocMatrA[%i][%i] = %f", 
 			local_x, 
 			local_y, 
-			a[global_y * widthA ]//,
+			a[global_y * widthA + global_x]//,
 			//local_x, 
 			//local_y, 
 			//b[global_x + widthB]
