@@ -1,0 +1,39 @@
+kernel void sum(global const int* a, global const int*b, global int *c){
+
+		uint i = get_global_id(0);
+
+		printf("\ni = %i", i);
+		c[i] = a[i] + b[i];
+		printf("\na[%i] = %i  b[%i] = %i c[%i] = %i", i, a[i], i, b[i], i, c[i]);
+}
+
+kernel void matrix_global(global const float* a, global const float* b, global float *c, int widthA, int widthB){
+
+		int global_x = get_global_id(0);//x координата
+		int global_y = get_global_id(1);//y координата
+
+
+		printf("\nvalue1 = %i", widthA);
+
+		float value = 0.0;
+
+		for(int i = 0; i < widthA; i++){
+			
+			value += a[global_y * widthA + i] * b[global_x + i * widthB];
+		
+		}
+
+		c[global_x + global_y * widthB] = value;
+		//printf("\nvalue = %f", value);
+
+}
+
+kernel void matrix_local(global const float* a, global const float* b, global float* c, int widthA, int widthB){
+
+		int local_x = get_local_id(0);
+		int local_y = get_local_id(1);
+
+
+
+
+}
