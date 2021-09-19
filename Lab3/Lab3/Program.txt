@@ -48,20 +48,28 @@ kernel void matrix_local(global const float* a, global const float* b, global fl
 
 		for(int i = 0; i < 2; i++){//2 в данном случае это количество сабплиток умещающихся по ширине всей глобал работы, т.е 4 надо реплейснуть потом на константу. количество сабплиток это ширина итоговой матрицы делить на ширину лок. группы
 		
+			int reverseIterator = 2 - 1 - i;
 
-			locMatrA[local_y][local_x] = a[global_y * widthA + local_x + i*2];
-			//locMatrB[local_y][local_x] = b[global_x + i * global_y];
+			//locMatrA[local_y][local_x] = a[global_y * widthA + local_x + i*2];//2 тоже поменять на ширину сабматрицы
+			locMatrB[local_y][local_x] = b[global_x + widthB * global_y - 2 * reverseIterator * widthB];
 
-			if(global_y == 0){
+
+
+
+			//if(global_x == 0 || global_x == 1){//replace with global_y when testing A matrix output
 			
-			printf("\nlocMatrA[%i][%i] = %f, i=%i",
-			local_y, 
-			local_x, 
-			a[global_y * widthA + local_x + i*2],
-			i
-			);
+
+
+			//printf("\nlocMatrA[%i][%i] = %f, i=%i",
+			//local_y, 
+			//local_x, 
+			//a[global_y * widthA + local_x + i*2],
+			//i
+			//);
+
+
 			
-			}
+			//}
 		}
 
 }
