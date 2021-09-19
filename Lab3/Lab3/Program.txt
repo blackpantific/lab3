@@ -51,25 +51,31 @@ kernel void matrix_local(global const float* a, global const float* b, global fl
 			int reverseIterator = 2 - 1 - i;
 
 			//locMatrA[local_y][local_x] = a[global_y * widthA + local_x + i*2];//2 тоже поменять на ширину сабматрицы
-			locMatrB[local_y][local_x] = b[global_x + widthB * global_y - 2 * reverseIterator * widthB];
 
-
-
-
-			//if(global_x == 0 || global_x == 1){//replace with global_y when testing A matrix output
+			int positionB = global_x + widthB * global_y - 2 * reverseIterator * widthB;
+			if(positionB < 0){
+				
+				locMatrB[local_y][local_x] = b[global_x + widthB * global_y];
+			}else{
 			
+				locMatrB[local_y][local_x] = b[global_x + widthB * global_y - 2 * reverseIterator * widthB];
+			}
 
 
-			//printf("\nlocMatrA[%i][%i] = %f, i=%i",
-			//local_y, 
-			//local_x, 
-			//a[global_y * widthA + local_x + i*2],
-			//i
-			//);
-
+			if((global_y == 0 || global_y == 1) && (global_x == 0 || global_x == 1)){
+				
+				printf("\nlocMatrB[%i][%i] = %f, i=%i, global_x = %i, global_y = %i, %i",
+				local_y, 
+				local_x, 
+				locMatrB[local_y][local_x],
+				i,
+				global_x,
+				global_y, 
+				global_x + widthB * global_y - 2 * reverseIterator * widthB);
+				
+			}
 
 			
-			//}
 		}
 
 }
