@@ -69,38 +69,16 @@ kernel void matrix_local(global const float* a, global const float* b, global fl
 			float value = 0.0;
 
 
-
-
-			
-
 			for(int k = 0; k < 2; k++){
 			
-				value += locMatrA[local_y][local_x + k] * locMatrB[local_y + k][local_x];
-				
-			}
-			if((global_y == 0 ) && (global_x == 1)){
-
-
-			float tempValue = 0.0;
-				for(int k = 0; k < 2; k++){
-				tempValue += locMatrA[local_y][local_x + k] * locMatrB[local_y + k][local_x];
+				value += locMatrA[local_y][k] * locMatrB[k][local_x];
+	
 			}
 
-
-			printf("\nvalue = %f", value);
-				
-				for(int c = 0; c < 2; c++){
-				for(int v = 0; v<2; v++){
-				
-					printf("\nmatrixA[%i][%i] = %f",c,v, locMatrA[c][v] );
-				}
-			}
-
-			}
-
-			c[global_x + global_y * widthB] += value;
 
 			barrier(CLK_LOCAL_MEM_FENCE);
+
+			c[global_x + global_y * widthB] += value;
 
 			//if((global_y == 0 || global_y == 1) && (global_x == 2 || global_x == 3)){
 				
@@ -127,9 +105,5 @@ kernel void matrix_local(global const float* a, global const float* b, global fl
 				//a[global_y * widthA + local_x + i*2]);
 			//}
 
-
-
-			
 		}
-
 }
