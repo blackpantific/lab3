@@ -60,8 +60,8 @@ cl_mem arg_buffer_a;
 cl_mem arg_buffer_b;
 cl_mem arg_buffer_c;
 
-int globalWorkSize = 4;//для больших матриц равно 32
-int localWorkSize = 2;//для больших по 16
+int globalWorkSize = 32;//для больших матриц равно 32
+int localWorkSize = 16;//для больших по 16
 
 int main()
 {
@@ -90,6 +90,12 @@ int main()
 	{
 		throw "Error: Failed to create a program!\n";
 	}
+
+
+
+	const string param_s = "-D COLSROWS=" + to_string(NKM[1]) + " -D TS=" + to_string(localWorkSize) +
+		" -D WPT=" + to_string(WPT) + " -D RTS=" + to_string(RTS);//"-D COLSROWS=2 -D PSG=2";
+
 
 	status = clBuildProgram(program, 1, &deviceID, NULL, NULL, NULL);
 
@@ -127,20 +133,10 @@ int main()
 	status = clEnqueueWriteBuffer(queue, arg_buffer_a, CL_FALSE, 0, sizeof(float) * NKM[1] * NKM[2],
 		matrix1, 0, NULL, NULL);
 
-	/*for (size_t i = 0; i < NKM[1] * NKM[2]; i++)
-	{
-		printf("\na[%i] = %f", i, matrix1[i]);
-	}*/
-
 	arg_buffer_b = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(float) * NKM[0] * NKM[1], NULL, &status);
 
 	status = clEnqueueWriteBuffer(queue, arg_buffer_b, CL_FALSE, 0, sizeof(float) * NKM[0] * NKM[1],
 		matrix2, 0, NULL, NULL);
-
-	/*for (size_t i = 0; i < NKM[0] * NKM[1]; i++)
-	{
-		printf("\na[%i] = %f", i, matrix2[i]);
-	}*/
 
 	arg_buffer_c = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * NKM[0] * NKM[2], NULL, &status);
 
@@ -167,21 +163,13 @@ int main()
 
 	size_t dimentions = 2;
 	size_t global_work_size[2];
-	//kernel2
-	//global_work_size[0] = matrix1Rows;
-	//global_work_size[1] = matrix2Columns;
 
 	global_work_size[0] = NKM[2];
 	global_work_size[1] = NKM[0];
 
-	//kernel3
 
 	size_t local_work_size[2];
-	//kernel2
-	//local_work_size[0] = localWorkSize;
-	//local_work_size[1] = localWorkSize;
 
-	//kernel3
 	local_work_size[0] = localWorkSize;
 	local_work_size[1] = localWorkSize;
 
