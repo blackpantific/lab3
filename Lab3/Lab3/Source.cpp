@@ -60,8 +60,8 @@ cl_mem arg_buffer_a;
 cl_mem arg_buffer_b;
 cl_mem arg_buffer_c;
 
-int globalWorkSize = 8;//для больших матриц равно 32
-int localWorkSize = 2;//для больших по 16
+int globalWorkSize = 32;//для больших матриц равно 32
+int localWorkSize = 8;//для больших по 16
 
 int main()
 {
@@ -91,13 +91,14 @@ int main()
 		throw "Error: Failed to create a program!\n";
 	}
 
+	int numOfSubmatrixes = globalWorkSize / localWorkSize;
 
+	const string param_s = "-D LOCALWS=" + to_string(localWorkSize) + " -D NUM_OF_SUBMATRIX=" + to_string(numOfSubmatrixes);//"-D COLSROWS=2 -D PSG=2";
+	int size = param_s.size();
+	char* parameters = new char[size + 1];
+	strcpy_s(parameters, size + 1, param_s.c_str());
 
-	//const string param_s = "-D COLSROWS=" + to_string(NKM[1]) + " -D TS=" + to_string(localWorkSize) +
-		//" -D WPT=" + to_string(WPT) + " -D RTS=" + to_string(RTS);//"-D COLSROWS=2 -D PSG=2";
-
-
-	status = clBuildProgram(program, 1, &deviceID, NULL, NULL, NULL);
+	status = clBuildProgram(program, 1, &deviceID, parameters, NULL, NULL);
 
 	status = clGetProgramBuildInfo(program, deviceID, CL_PROGRAM_BUILD_LOG, NULL, NULL, &param_value);
 
