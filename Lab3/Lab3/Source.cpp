@@ -60,8 +60,8 @@ cl_mem arg_buffer_a;
 cl_mem arg_buffer_b;
 cl_mem arg_buffer_c;
 
-int globalWorkSize = 32;//для больших матриц равно 32
-int localWorkSize = 16;//для больших по 16
+int globalWorkSize = 8;//для больших матриц равно 32
+int localWorkSize = 2;//для больших по 16
 
 int main()
 {
@@ -93,8 +93,8 @@ int main()
 
 
 
-	const string param_s = "-D COLSROWS=" + to_string(NKM[1]) + " -D TS=" + to_string(localWorkSize) +
-		" -D WPT=" + to_string(WPT) + " -D RTS=" + to_string(RTS);//"-D COLSROWS=2 -D PSG=2";
+	//const string param_s = "-D COLSROWS=" + to_string(NKM[1]) + " -D TS=" + to_string(localWorkSize) +
+		//" -D WPT=" + to_string(WPT) + " -D RTS=" + to_string(RTS);//"-D COLSROWS=2 -D PSG=2";
 
 
 	status = clBuildProgram(program, 1, &deviceID, NULL, NULL, NULL);
@@ -196,7 +196,7 @@ int main()
 
 	for (size_t i = 0; i < NKM[0] * NKM[2]; i++)
 	{
-		printf("\nc[%i] = %f", i, resultMatrix[i]);
+		//printf("\nc[%i] = %f", i, resultMatrix[i]);
 	}
 
 
@@ -596,7 +596,7 @@ void get_matrixs_from_file_v2(string input_file_path, int NKM[], float*& matrix1
 	/*printf("\n");
 	for (size_t i = 0; i < matrix2ElementsCountWithAdded; i++)
 	{
-		printf("\nmatrix1[%d] = %f", i, matrix2[i]);
+		printf("\nmatrix2[%d] = %f", i, matrix2[i]);
 	}*/
 
 	NKM[2] = matrix1RowsWithNulls;

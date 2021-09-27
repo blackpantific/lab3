@@ -47,11 +47,11 @@ kernel void matrix_local(global const float* a, global const float* b, global fl
 		//global_x,
 		//global_y);
 
-		for(int i = 0; i < 2; i++){//2 в данном случае это количество сабплиток умещающихся по ширине всей глобал работы, т.е 4 надо реплейснуть потом на константу. количество сабплиток это ширина итоговой матрицы делить на ширину лок. группы
+		for(int i = 0; i < 4; i++){//2 в данном случае это количество сабплиток умещающихся по ширине всей глобал работы, т.е 4 надо реплейснуть потом на константу. количество сабплиток это ширина итоговой матрицы делить на ширину лок. группы
 
 
 			locMatrA[local_y][local_x] = a[global_y * widthA + local_x + i*2];//2 тоже поменять на ширину сабматрицы
-
+			int shiftInY = 0;
 			if(global_y + 1 <= 2){
 			
 				locMatrB[local_y][local_x] = b[global_x + 2 * i * widthB + widthB * global_y];//2 поменять на кол-во строк сабматрицы
@@ -59,15 +59,40 @@ kernel void matrix_local(global const float* a, global const float* b, global fl
 			
 				///summary: это смещение от 0 в пределах сабматрицы для того чтобы "прыгать" через определенное количество элементов
 				//в других сабматрицах. Ищется только для матрицы B
-				int shiftInY = (global_y + 1)/2 - 1;
+				shiftInY = (global_y)%2;
 				locMatrB[local_y][local_x] = b[global_x + 2 * i * widthB + widthB * shiftInY];//2 поменять на кол-во строк сабматрицы
+				if((global_y == 4 || global_y == 5) && (global_x == 0 || global_x == 1)){
+				
+					printf("\nlocMatrB[%d][%d] = b[%d + 2 * %d * %d + %d * %d] = %f", local_y, local_x, global_x, 
+					i, widthB, widthB, shiftInY, b[global_x + 2 * i * widthB + widthB * shiftInY]);
+				}
+			}
+
+			if((global_y == 4 || global_y == 5) && (global_x == 0 || global_x == 1)){
+				printf("\nlocMatrB[%i][%i] = %f, i=%i, global_x = %i, global_y = %i, value = %f, shiftInY = %f",
+				local_y, 
+				local_x, 
+				locMatrB[local_y][local_x],
+				i,
+				global_x,
+				global_y,
+				b[global_x + 2 * i * widthB + widthB * shiftInY],
+				shiftInY
+				);
+				
 			}
 
 
 			barrier(CLK_LOCAL_MEM_FENCE);
 
 			float value = 0.0;
+			float tempValue = 0.0;
 
+			
+			
+			
+
+			
 
 			for(int k = 0; k < 2; k++){
 			
@@ -75,10 +100,25 @@ kernel void matrix_local(global const float* a, global const float* b, global fl
 	
 			}
 
-
 			barrier(CLK_LOCAL_MEM_FENCE);
 
+			if((global_y == 4 ) && (global_x == 0 )){
+			
+				//printf("\nvalue = %f", value);
+
+			}
+
 			c[global_x + global_y * widthB] += value;
+
+
+
+
+
+
+
+
+
+
 
 			//if((global_y == 0 || global_y == 1) && (global_x == 2 || global_x == 3)){
 				
