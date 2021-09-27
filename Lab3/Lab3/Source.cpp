@@ -597,7 +597,7 @@ void get_matrixs_from_file_v2(string input_file_path, int NKM[], float*& matrix1
 	/*printf("\n");
 	for (size_t i = 0; i < matrix2ElementsCountWithAdded; i++)
 	{
-		printf("\nmatrix1[%d] = %f", i, matrix2[i]);
+		printf("\nmatrix2[%d] = %f", i, matrix2[i]);
 	}*/
 
 	NKM[2] = matrix1RowsWithNulls;

@@ -46,7 +46,11 @@ kernel void matrix_local(global const float* a, global const float* b, global fl
 
 
 			locMatrA[local_y][local_x] = a[global_y * widthA + local_x + i*LOCALWS];//2 тоже поменять на ширину сабматрицы
+<<<<<<< HEAD
 
+=======
+			int shiftInY = 0;
+>>>>>>> fix/try_to_find_error
 			if(global_y + 1 <= LOCALWS){
 			
 				locMatrB[local_y][local_x] = b[global_x + LOCALWS * i * widthB + widthB * global_y];//2 поменять на кол-во строк сабматрицы
@@ -54,14 +58,28 @@ kernel void matrix_local(global const float* a, global const float* b, global fl
 			
 				///summary: это смещение от 0 в пределах сабматрицы для того чтобы "прыгать" через определенное количество элементов
 				//в других сабматрицах. Ищется только для матрицы B
+<<<<<<< HEAD
 				int shiftInY = (global_y + 1)/LOCALWS - 1;
 				locMatrB[local_y][local_x] = b[global_x + LOCALWS * i * widthB + widthB * shiftInY];//2 поменять на кол-во строк сабматрицы
+=======
+				
+				shiftInY = (global_y) % LOCALWS;
+				
+
+				locMatrB[local_y][local_x] = b[global_x + LOCALWS * i * widthB + widthB * shiftInY];//2 поменять на кол-во строк сабматрицы
+				//if((global_y == 4 || global_y == 5) && (global_x == 0 || global_x == 1)){
+				
+					//printf("\nlocMatrB[%d][%d] = b[%d + LOCALWS * %d * %d + %d * %d] = %f", local_y, local_x, global_x, 
+					//i, widthB, widthB, shiftInY, b[global_x + LOCALWS * i * widthB + widthB * shiftInY]);
+				//}
+>>>>>>> fix/try_to_find_error
 			}
 
 
 			barrier(CLK_LOCAL_MEM_FENCE);
 
 			float value = 0.0;
+			float tempValue = 0.0;
 
 
 			for(int k = 0; k < LOCALWS; k++){
@@ -70,10 +88,25 @@ kernel void matrix_local(global const float* a, global const float* b, global fl
 	
 			}
 
-
 			barrier(CLK_LOCAL_MEM_FENCE);
 
+			if((global_y == 4 ) && (global_x == 0 )){
+			
+				//printf("\nvalue = %f", value);
+
+			}
+
 			c[global_x + global_y * widthB] += value;
+
+
+
+
+
+
+
+
+
+
 
 			//if((global_y == 0 || global_y == 1) && (global_x == 2 || global_x == 3)){
 				
