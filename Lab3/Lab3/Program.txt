@@ -41,16 +41,17 @@ kernel void matrix_local(global const float* a, global const float* b, global fl
 		local float locMatrB[LOCALWS][LOCALWS];//заменить 2 на ширину(она же высота) сабматрицы лок группы, т.е. B
 		local float locMatrC[LOCALWS][LOCALWS];
 
+		//printf("\nlocal_x = %i, local_y = %i, global_x = %i, global_y = %i",
+		//local_x,
+		//local_y,
+		//global_x,
+		//global_y);
 
 		for(int i = 0; i < NUM_OF_SUBMATRIX; i++){//2 в данном случае это количество сабплиток умещающихся по ширине всей глобал работы, т.е 4 надо реплейснуть потом на константу. количество сабплиток это ширина итоговой матрицы делить на ширину лок. группы
 
 
 			locMatrA[local_y][local_x] = a[global_y * widthA + local_x + i*LOCALWS];//2 тоже поменять на ширину сабматрицы
-<<<<<<< HEAD
-
-=======
 			int shiftInY = 0;
->>>>>>> fix/try_to_find_error
 			if(global_y + 1 <= LOCALWS){
 			
 				locMatrB[local_y][local_x] = b[global_x + LOCALWS * i * widthB + widthB * global_y];//2 поменять на кол-во строк сабматрицы
@@ -58,10 +59,6 @@ kernel void matrix_local(global const float* a, global const float* b, global fl
 			
 				///summary: это смещение от 0 в пределах сабматрицы для того чтобы "прыгать" через определенное количество элементов
 				//в других сабматрицах. Ищется только для матрицы B
-<<<<<<< HEAD
-				int shiftInY = (global_y + 1)/LOCALWS - 1;
-				locMatrB[local_y][local_x] = b[global_x + LOCALWS * i * widthB + widthB * shiftInY];//2 поменять на кол-во строк сабматрицы
-=======
 				
 				shiftInY = (global_y) % LOCALWS;
 				
@@ -72,7 +69,6 @@ kernel void matrix_local(global const float* a, global const float* b, global fl
 					//printf("\nlocMatrB[%d][%d] = b[%d + LOCALWS * %d * %d + %d * %d] = %f", local_y, local_x, global_x, 
 					//i, widthB, widthB, shiftInY, b[global_x + LOCALWS * i * widthB + widthB * shiftInY]);
 				//}
->>>>>>> fix/try_to_find_error
 			}
 
 
