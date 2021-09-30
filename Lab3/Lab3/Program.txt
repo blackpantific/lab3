@@ -86,12 +86,6 @@ kernel void matrix_local(global const float* a, global const float* b, global fl
 
 			barrier(CLK_LOCAL_MEM_FENCE);
 
-			if((global_y == 4 ) && (global_x == 0 )){
-			
-				//printf("\nvalue = %f", value);
-
-			}
-
 			c[global_x + global_y * widthB] += value;
 
 
@@ -130,4 +124,85 @@ kernel void matrix_local(global const float* a, global const float* b, global fl
 			//}
 
 		}
+}
+
+
+kernel void matrix_local_custom(global const float* a, global const float* b, global float* c, int widthA, int widthB){
+
+		int local_x = get_local_id(0);
+		int local_y = get_local_id(1);
+
+		int global_x = get_global_id(0);//x координата
+		int global_y = get_global_id(1);//y координата
+
+
+		local float locMatrA[LOCALWS][LOCALWS];//заменить 2 на ширину(она же высота) сабматрицы лок группы, т.е. A
+		local float locMatrB[LOCALWS][LOCALWS];//заменить 2 на ширину(она же высота) сабматрицы лок группы, т.е. B
+
+		//printf("\nlocal_x = %i, local_y = %i, global_x = %i, global_y = %i",
+		//local_x,
+		//local_y,
+		//global_x,
+		//global_y);
+
+		for(int i = 0; i < NUM_OF_SUBMATRIX; i++){
+		
+
+			for(int iterA = 0; iterA < 2; iterA++){
+			//iterA это итератор переноса 2, 4, 8 или 16 элементов одним тредом,
+			//чтобы руками не писать запись в каждый элемент от 0-8 в массиве используем цикл
+
+				locMatrA[local_y][local_x] = a[global_y * widthA + local_x + i*LOCALWS];
+				locMatrA[local_y][local_x + 1 + iterA] = a[global_y * widthA + local_x + 1 + iterA + i*LOCALWS];//поменять 1 на iter в цикле
+			}
+			
+			//if(i == 0){
+			//printf("\nlocalMatrA = %f, localMatrA1 = %f",
+			//a[global_y * widthA + local_x + i*LOCALWS],
+			//a[global_y * widthA + local_x + 1 + i*LOCALWS]);
+			//}
+
+			int shiftInY = 0;
+			if(global_y + 1 <= LOCALWS){
+			
+				locMatrB[local_y][local_x] = b[global_x * 2 + LOCALWS * i * widthB + widthB * global_y];
+				locMatrB[local_y][local_x + 1] = b[global_x * 2 + LOCALWS * i * widthB + 1 + widthB * global_y];
+			}else{
+			
+				///summary: это смещение от 0 в пределах сабматрицы для того чтобы "прыгать" через определенное количество элементов
+				//в других сабматрицах. Ищется только для матрицы B
+				
+				shiftInY = (global_y) % LOCALWS;
+				
+
+				locMatrB[local_y][local_x] = b[global_x * 2 + LOCALWS * i * widthB + widthB * shiftInY];
+				locMatrB[local_y][local_x + 1] = b[global_x * 2 + LOCALWS * i * widthB + 1 + widthB * shiftInY];
+			}
+
+			///ПЕРЕНОСИТ ПРАВИЛЬНО ПРИ global_y + 1 <= LOCALWS
+
+			//if((global_y == 0 || global_y == 1) && i == 0){
+				//printf("\nlocalMatrB = %f, localMatrB1 = %f",
+				//locMatrB[local_y][local_x],
+				//locMatrB[local_y][local_x + 1]
+				//);
+			//}
+			
+			///ПЕРЕНОСИТ ПРАВИЛЬНО ПРИ global_y + 1 > LOCALWS
+
+			if((global_y == 2 || global_y == 3) && i == 0){
+				printf("\nlocalMatrB = %f, localMatrB1 = %f",
+				locMatrB[local_y][local_x],
+				locMatrB[local_y][local_x + 1]
+				);
+			}
+
+
+
+			barrier(CLK_LOCAL_MEM_FENCE);
+		
+		
+		
+		}
+
 }
