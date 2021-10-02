@@ -247,9 +247,9 @@ void write_matrix_to_file() {
 	outputData.push_back('\n');
 
 	int increment = 0;
-	for (size_t i = 0; i < matrix1Rows - numbersToRemoveOnY; i++)//мнимые циклы
+	for (size_t i = 0; i < matrix1Rows; i++)//мнимые циклы
 	{
-		for (size_t j = 0; j < matrix2Columns - numbersToRemoveOnX; j++)
+		for (size_t j = 0; j < matrix2Columns; j++)
 		{
 			char* char_arr;
 			string str_obj(to_string(resultMatrix[increment]));
@@ -261,7 +261,7 @@ void write_matrix_to_file() {
 
 			increment++;
 		}
-		increment += numbersToRemoveOnX;
+		//increment += numbersToRemoveOnX;
 		outputData.pop_back();
 		outputData.push_back('\r');
 		outputData.push_back('\n');
