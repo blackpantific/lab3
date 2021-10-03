@@ -62,7 +62,7 @@ cl_mem arg_buffer_c;
 
 int globalWorkSize = 16;//для больших матриц равно 32
 int localWorkSize = 8;//для больших по 16
-int threadCalculateUnits = 2;//значение не должно быть больше размера local WS
+int threadCalculateUnits = 8;//значение не должно быть больше размера local WS
 
 int main()
 {
@@ -94,7 +94,8 @@ int main()
 
 	int numOfSubmatrixes = globalWorkSize / localWorkSize;
 
-	const string param_s = "-D LOCALWS=" + to_string(localWorkSize) + " -D NUM_OF_SUBMATRIX=" + to_string(numOfSubmatrixes);//"-D COLSROWS=2 -D PSG=2";
+	const string param_s = "-D LOCALWS=" + to_string(localWorkSize) 
+		+ " -D NUM_OF_SUBMATRIX=" + to_string(numOfSubmatrixes) + " -D THREAD_CALC_UNITS=" + to_string(threadCalculateUnits);//"-D COLSROWS=2 -D PSG=2";
 	int size = param_s.size();
 	char* parameters = new char[size + 1];
 	strcpy_s(parameters, size + 1, param_s.c_str());

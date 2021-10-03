@@ -139,14 +139,15 @@ kernel void matrix_local_custom(global const float* a, global const float* b, gl
 		local float locMatrA[LOCALWS][LOCALWS];
 		local float locMatrB[LOCALWS][LOCALWS];
 
-		//printf("\nlocal_x = %i, local_y = %i, global_x = %i, global_y = %i",
-		//local_x,
-		//local_y,
-		//global_x,
-		//global_y);
+		float values[THREAD_CALC_UNITS];
+		//for(int j = 0; j < threadCalcUnits; j++){
+			
+			//values[j] = 0.0;
+		//}
 
 		for(int i = 0; i < NUM_OF_SUBMATRIX; i++){
 		
+			
 			
 			//numWorkIter - ýòî èòåðàòîð ðàáîòû íà 1 òðåä, òî åñòü 2, 4, 8 ýëåìåíòîâ âûïîëíåííîé ðàáîòû íà ïîòîê
 			for(int numWorkIter = 0; numWorkIter < threadCalcUnits;  numWorkIter++){
@@ -154,12 +155,6 @@ kernel void matrix_local_custom(global const float* a, global const float* b, gl
 				locMatrA[local_y][local_x * threadCalcUnits + numWorkIter] 
 					= a[global_y * widthA + local_x * threadCalcUnits + numWorkIter + i*LOCALWS];
 			}
-			
-			//if(i == 0){
-				//printf("\nlocalMatrA = %f, localMatrA1 = %f",
-				//a[global_y * widthA + local_x * threadCalcUnits + i*LOCALWS],
-				//a[global_y * widthA + local_x * threadCalcUnits + 1 + i*LOCALWS]);
-			//}
 
 			int shiftInY = 0;
 			if(global_y + 1 <= LOCALWS){
@@ -184,57 +179,29 @@ kernel void matrix_local_custom(global const float* a, global const float* b, gl
 				}
 			}
 
-			///ÏÅÐÅÍÎÑÈÒ ÏÐÀÂÈËÜÍÎ ÏÐÈ global_y + 1 <= LOCALWS
-
-			//if((global_y == 0 || global_y == 1) && i == 0){
-				//printf("\nlocalMatrB = %f, localMatrB1 = %f",
-				//locMatrB[local_y][local_x],
-				//locMatrB[local_y][local_x + 1]
-				//);
-			//}
-			
-			///ÏÅÐÅÍÎÑÈÒ ÏÐÀÂÈËÜÍÎ ÏÐÈ global_y + 1 > LOCALWS
-
-			//if((global_y == 2 || global_y == 3) && i == 0){
-				//printf("\nlocalMatrB = %f, localMatrB1 = %f",
-				//locMatrB[local_y][local_x],
-				//locMatrB[local_y][local_x + 1]
-				//);
-			//}
-
 			barrier(CLK_LOCAL_MEM_FENCE);
 
-
-			//if(global_x == 0 && global_y == 0 && i == 0){
-			//for(int o = 0; o < LOCALWS; o++){
 			
-					//for(int u = 0; u < LOCALWS; u++){
-					
-						//printf("\nlocMatrB[%i][%i] = %f", o,u,locMatrB[o][u]);
-					//}
-				//}
-			//}
-			
-			float values[threadCalcUnits];
 			float value = 0.0;
 			float value1 = 0.0;
 
 			for(int k = 0; k < LOCALWS; k++){
-			//âûíåñòè îáùóþ ïåðåìåííóþ
-				value += locMatrA[local_y][k] * locMatrB[k][local_x * threadCalcUnits];
-				value1 += locMatrA[local_y][k] * locMatrB[k][local_x * threadCalcUnits + 1];
 
-				//printf("\nvalue = %f = locMatrA[%i][%i] * locMatrB[%i][%i] = %f * %f\nvalue1 = %f = locMatrA[%i][%i] * locMatrB[%i][%i] = %f * %f\n",
-								//value, local_y, k, k, local_x, locMatrA[local_y][k], locMatrB[k][local_x],
-								//value1, local_y, k, k, local_x, locMatrA[local_y][k], locMatrB[k][local_x + 1]);
+				float common = locMatrA[local_y][k];
+
+				for(int j = 0; j < threadCalcUnits; j++){
+					
+					values[j] += common * locMatrB[k][local_x * threadCalcUnits + j];
+				}
+
 			}
 
-				c[global_x * threadCalcUnits + global_y * widthB] += value;
-				c[global_x * threadCalcUnits + 1 + global_y * widthB] += value1;
+			for(int j = 0; j < threadCalcUnits; j++){
+
+				c[global_x * threadCalcUnits + j + global_y * widthB] += values[j];
+				values[j] = 0.0;
+			}
 			
-
-			//printf("\n%f = c[%i + %i * %i], %f", c[global_x + global_y * widthB], global_x, global_y, widthB, c[global_x + 1 + global_y * widthB]);
-
 		}
 
 }
