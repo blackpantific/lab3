@@ -61,7 +61,8 @@ cl_mem arg_buffer_b;
 cl_mem arg_buffer_c;
 
 int globalWorkSize = 4;//для больших матриц равно 32
-int localWorkSize = 2;//для больших по 16
+int localWorkSize = 4;//для больших по 16
+int threadCalculateUnits = 2;
 
 int main()
 {
@@ -156,6 +157,7 @@ int main()
 	status |= clSetKernelArg(kernel, 2, sizeof(cl_mem), &arg_buffer_c);
 	status |= clSetKernelArg(kernel, 3, sizeof(int), &widthA);
 	status |= clSetKernelArg(kernel, 4, sizeof(int), &widthB);
+	status |= clSetKernelArg(kernel, 5, sizeof(int), &threadCalculateUnits);
 	if (status != CL_SUCCESS)
 	{
 		throw "Error: Failed in clSetKernelArg!\n";
