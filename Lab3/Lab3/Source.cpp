@@ -60,9 +60,9 @@ cl_mem arg_buffer_a;
 cl_mem arg_buffer_b;
 cl_mem arg_buffer_c;
 
-int globalWorkSize = 4;//для больших матриц равно 32
-int localWorkSize = 4;//для больших по 16
-int threadCalculateUnits = 2;
+int globalWorkSize = 16;//для больших матриц равно 32
+int localWorkSize = 8;//для больших по 16
+int threadCalculateUnits = 2;//значение не должно быть больше размера local WS
 
 int main()
 {
@@ -167,13 +167,13 @@ int main()
 	size_t dimentions = 2;
 	size_t global_work_size[2];
 
-	global_work_size[0] = NKM[2] / 2;
+	global_work_size[0] = NKM[2] / threadCalculateUnits;//эквивалентно NKM[2] / 2
 	global_work_size[1] = NKM[0];
 
 
 	size_t local_work_size[2];
 
-	local_work_size[0] = localWorkSize / 2;
+	local_work_size[0] = localWorkSize / threadCalculateUnits;//эквивалентно localWorkSize / 2
 	local_work_size[1] = localWorkSize;
 
 	cl_event ourEvent = 0;

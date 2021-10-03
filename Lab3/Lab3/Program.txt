@@ -127,7 +127,7 @@ kernel void matrix_local(global const float* a, global const float* b, global fl
 
 ///ThreadCalculateUnits указывает на количество работы(ворк айтемов), выполняемых одним потоком
 kernel void matrix_local_custom(global const float* a, global const float* b, global float* c, 
-									int widthA, int widthB, int threadCalculateUnits){
+									int widthA, int widthB, int threadCalcUnits){
 
 		int local_x = get_local_id(0);
 		int local_y = get_local_id(1);
@@ -136,8 +136,8 @@ kernel void matrix_local_custom(global const float* a, global const float* b, gl
 		int global_y = get_global_id(1);//y координата
 
 
-		local float locMatrA[4][4];//заменить 2 на ширину(она же высота) сабматрицы лок группы, т.е. A
-		local float locMatrB[4][4];//заменить 2 на ширину(она же высота) сабматрицы лок группы, т.е. B
+		local float locMatrA[LOCALWS][LOCALWS];
+		local float locMatrB[LOCALWS][LOCALWS];
 
 		//printf("\nlocal_x = %i, local_y = %i, global_x = %i, global_y = %i",
 		//local_x,
@@ -145,25 +145,31 @@ kernel void matrix_local_custom(global const float* a, global const float* b, gl
 		//global_x,
 		//global_y);
 
-		for(int i = 0; i < 1; i++){
+		for(int i = 0; i < NUM_OF_SUBMATRIX; i++){
 		
-			//доработать нормальный цикл
-
-			locMatrA[local_y][local_x * 2] = a[global_y * widthA + local_x * 2  + i*LOCALWS];
-			locMatrA[local_y][local_x * 2 + 1] = a[global_y * widthA + local_x * 2 + 1 + i*LOCALWS];//поменять 1 на iter в цикле
 			
+			//numWorkIter - это итератор работы на 1 тред, то есть 2, 4, 8 элементов выполненной работы на поток
+			for(int numWorkIter = 0; numWorkIter < threadCalcUnits;  numWorkIter++){
+
+				locMatrA[local_y][local_x * threadCalcUnits + numWorkIter] 
+					= a[global_y * widthA + local_x * threadCalcUnits + numWorkIter + i*LOCALWS];
+			}
 			
 			//if(i == 0){
 				//printf("\nlocalMatrA = %f, localMatrA1 = %f",
-				//a[global_y * widthA + local_x * 2 + i*LOCALWS],
-				//a[global_y * widthA + local_x * 2 + 1 + i*LOCALWS]);
+				//a[global_y * widthA + local_x * threadCalcUnits + i*LOCALWS],
+				//a[global_y * widthA + local_x * threadCalcUnits + 1 + i*LOCALWS]);
 			//}
 
 			int shiftInY = 0;
 			if(global_y + 1 <= LOCALWS){
 			
-				locMatrB[local_y][local_x * 2] = b[global_x * 2 + LOCALWS * i * widthB + widthB * global_y];		//locMatrB[local_y][local_x * 2]
-				locMatrB[local_y][local_x * 2 + 1] = b[global_x * 2 + LOCALWS * i * widthB + 1 + widthB * global_y];
+				for(int numWorkIter = 0; numWorkIter < threadCalcUnits;  numWorkIter++){
+					
+					locMatrB[local_y][local_x * threadCalcUnits + numWorkIter] 
+						= b[global_x * threadCalcUnits + LOCALWS * i * widthB + numWorkIter + widthB * global_y];
+				}
+
 			}else{
 			
 				///summary: это смещение от 0 в пределах сабматрицы для того чтобы "прыгать" через определенное количество элементов
@@ -171,9 +177,11 @@ kernel void matrix_local_custom(global const float* a, global const float* b, gl
 				
 				shiftInY = (global_y) % LOCALWS;
 				
+				for(int numWorkIter = 0; numWorkIter < threadCalcUnits;  numWorkIter++){
 
-				locMatrB[local_y][local_x * 2] = b[global_x * 2 + LOCALWS * i * widthB + widthB * shiftInY];
-				locMatrB[local_y][local_x * 2 + 1] = b[global_x * 2 + LOCALWS * i * widthB + 1 + widthB * shiftInY];
+					locMatrB[local_y][local_x * threadCalcUnits + numWorkIter] 
+						= b[global_x * threadCalcUnits + LOCALWS * i * widthB + numWorkIter + widthB * shiftInY];
+				}
 			}
 
 			///ПЕРЕНОСИТ ПРАВИЛЬНО ПРИ global_y + 1 <= LOCALWS
@@ -194,36 +202,36 @@ kernel void matrix_local_custom(global const float* a, global const float* b, gl
 				//);
 			//}
 
-
-
 			barrier(CLK_LOCAL_MEM_FENCE);
 
 
-			if(global_x == 0 && global_y == 0 && i == 0){
-			for(int o = 0; o < 4; o++){
+			//if(global_x == 0 && global_y == 0 && i == 0){
+			//for(int o = 0; o < LOCALWS; o++){
 			
-					for(int u = 0; u < 4; u++){
+					//for(int u = 0; u < LOCALWS; u++){
 					
-						printf("\nlocMatrB[%i][%i] = %f", o,u,locMatrB[o][u]);
-					}
-				}
-			}
+						//printf("\nlocMatrB[%i][%i] = %f", o,u,locMatrB[o][u]);
+					//}
+				//}
+			//}
 			
+			float values[threadCalcUnits];
 			float value = 0.0;
 			float value1 = 0.0;
 
 			for(int k = 0; k < LOCALWS; k++){
 			//вынести общую переменную
-				value += locMatrA[local_y][k] * locMatrB[k][local_x * 2];
-				value1 += locMatrA[local_y][k] * locMatrB[k][local_x * 2 + 1];
+				value += locMatrA[local_y][k] * locMatrB[k][local_x * threadCalcUnits];
+				value1 += locMatrA[local_y][k] * locMatrB[k][local_x * threadCalcUnits + 1];
 
 				//printf("\nvalue = %f = locMatrA[%i][%i] * locMatrB[%i][%i] = %f * %f\nvalue1 = %f = locMatrA[%i][%i] * locMatrB[%i][%i] = %f * %f\n",
 								//value, local_y, k, k, local_x, locMatrA[local_y][k], locMatrB[k][local_x],
 								//value1, local_y, k, k, local_x, locMatrA[local_y][k], locMatrB[k][local_x + 1]);
 			}
 
-			c[global_x * 2 + global_y * widthB] += value;
-			c[global_x * 2 + 1 + global_y * widthB] += value1;
+				c[global_x * threadCalcUnits + global_y * widthB] += value;
+				c[global_x * threadCalcUnits + 1 + global_y * widthB] += value1;
+			
 
 			//printf("\n%f = c[%i + %i * %i], %f", c[global_x + global_y * widthB], global_x, global_y, widthB, c[global_x + 1 + global_y * widthB]);
 
