@@ -218,9 +218,13 @@ kernel void matrix_vector(global const float* a, global const float* b, global f
 		
 			//доработать нормальный цикл
 
-			locMatrA[local_y][local_x * threadCalcUnits] = a[global_y * widthA + local_x * threadCalcUnits  + i*LOCALWS];
-			locMatrA[local_y][local_x * threadCalcUnits + 1] = a[global_y * widthA + local_x * threadCalcUnits + 1 + i*LOCALWS];//поменять 1 на iter в цикле
-			
+			//numWorkIter - это итератор работы на 1 тред, то есть 2, 4, 8 элементов выполненной работы на поток
+			for(int numWorkIter = 0; numWorkIter < threadCalcUnits;  numWorkIter++){
+
+				locMatrA[local_y][local_x * threadCalcUnits + numWorkIter] 
+					= a[global_y * widthA + local_x * threadCalcUnits + numWorkIter + i*LOCALWS];
+			}
+
 			float2 matrBVector = (float2) (0.0f, 0.0f);
 
 			int shiftInY = 0;
@@ -250,9 +254,7 @@ kernel void matrix_vector(global const float* a, global const float* b, global f
 			}
 
 
-
 			barrier(CLK_LOCAL_MEM_FENCE);
-			
 			
 
 			for(int k = 0; k < LOCALWS; k++){
@@ -262,8 +264,6 @@ kernel void matrix_vector(global const float* a, global const float* b, global f
 				//тут вроде как тоже можно просто locMatrB[k][local_x], а не local_x * 2
 			}
 
-			
-			
 			
 			//может попробовать с на вектор float2 поменять?
 
