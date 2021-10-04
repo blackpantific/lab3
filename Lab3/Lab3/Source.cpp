@@ -60,9 +60,9 @@ cl_mem arg_buffer_a;
 cl_mem arg_buffer_b;
 cl_mem arg_buffer_c;
 
-int globalWorkSize = 16;//для больших матриц равно 32
-int localWorkSize = 8;//для больших по 16
-int threadCalculateUnits = 8;//значение не должно быть больше размера local WS
+int globalWorkSize = 4;//для больших матриц равно 32
+int localWorkSize = 2;//для больших по 16
+int threadCalculateUnits = 2;//значение не должно быть больше размера local WS
 
 int main()
 {
@@ -117,7 +117,7 @@ int main()
 	}
 
 
-	kernel = clCreateKernel(program, "matrix_local_custom", &status);//ошибка обнаруживается тут
+	kernel = clCreateKernel(program, "matrix_vector", &status);//ошибка обнаруживается тут
 	if (!kernel || status != CL_SUCCESS)
 	{
 		throw "Error: Failed to create compute kernel!\n";
