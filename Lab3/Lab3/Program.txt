@@ -210,9 +210,9 @@ kernel void matrix_vector(global const float* a, global const float* b, global f
 
 
 		local float locMatrA[LOCALWS][LOCALWS];
-		local float2 locMatrB[LOCALWS][LOCALWS/2];//делим на 2 потому что ширина вектора 2
+		local float4 locMatrB[LOCALWS][LOCALWS/4];//делим на 2 потому что ширина вектора 2
 
-		float2 value = 0.0;
+		float4 value = 0.0;
 
 		for(int i = 0; i < NUM_OF_SUBMATRIX; i++){
 		
@@ -225,13 +225,15 @@ kernel void matrix_vector(global const float* a, global const float* b, global f
 					= a[global_y * widthA + local_x * threadCalcUnits + numWorkIter + i*LOCALWS];
 			}
 
-			float2 matrBVector = (float2) (0.0f, 0.0f);
+			float4 matrBVector = (float4) (0.0f, 0.0f, 0.0f, 0.0f);
 
 			int shiftInY = 0;
 			if(global_y + 1 <= LOCALWS){
 
 				matrBVector.s0 = b[global_x * threadCalcUnits + LOCALWS * i * widthB + widthB * global_y];
 				matrBVector.s1 = b[global_x * threadCalcUnits + LOCALWS * i * widthB + 1 + widthB * global_y];
+				matrBVector.s2 = b[global_x * threadCalcUnits + LOCALWS * i * widthB + 2 + widthB * global_y];
+				matrBVector.s3 = b[global_x * threadCalcUnits + LOCALWS * i * widthB + 3 + widthB * global_y];
 
 				locMatrB[local_y][local_x] = matrBVector;//ѕќ“≈Ќ÷»јЋ№Ќјя ќЎ»Ѕ ј, потому что лок икс может выйти за пределы 
 				//икс координаты вектора
@@ -247,6 +249,8 @@ kernel void matrix_vector(global const float* a, global const float* b, global f
 
 				matrBVector.s0 = b[global_x * threadCalcUnits + LOCALWS * i * widthB + widthB * shiftInY];
 				matrBVector.s1 = b[global_x * threadCalcUnits + LOCALWS * i * widthB + 1 + widthB * shiftInY];
+				matrBVector.s2 = b[global_x * threadCalcUnits + LOCALWS * i * widthB + 2 + widthB * shiftInY];
+				matrBVector.s3 = b[global_x * threadCalcUnits + LOCALWS * i * widthB + 3 + widthB * shiftInY];
 
 				locMatrB[local_y][local_x] = matrBVector;
 
@@ -269,6 +273,6 @@ kernel void matrix_vector(global const float* a, global const float* b, global f
 
 		}
 		
-		vstore2(value, 0, &c[global_x * threadCalcUnits + global_y * widthB]);
+		vstore4(value, 0, &c[global_x * threadCalcUnits + global_y * widthB]);
 
 }
