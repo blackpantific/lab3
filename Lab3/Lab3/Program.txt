@@ -230,10 +230,7 @@ kernel void matrix_vector(global const float* a, global const float* b, global f
 			int shiftInY = 0;
 			if(global_y + 1 <= LOCALWS){
 
-				matrBVector.s0 = b[global_x * threadCalcUnits + LOCALWS * i * widthB + widthB * global_y];
-				matrBVector.s1 = b[global_x * threadCalcUnits + LOCALWS * i * widthB + 1 + widthB * global_y];
-				matrBVector.s2 = b[global_x * threadCalcUnits + LOCALWS * i * widthB + 2 + widthB * global_y];
-				matrBVector.s3 = b[global_x * threadCalcUnits + LOCALWS * i * widthB + 3 + widthB * global_y];
+				matrBVector = vload4(0, &b[global_x * threadCalcUnits + LOCALWS * i * widthB + widthB * global_y]);
 
 				locMatrB[local_y][local_x] = matrBVector;//ѕќ“≈Ќ÷»јЋ№Ќјя ќЎ»Ѕ ј, потому что лок икс может выйти за пределы 
 				//икс координаты вектора
@@ -247,10 +244,7 @@ kernel void matrix_vector(global const float* a, global const float* b, global f
 				
 				shiftInY = (global_y) % LOCALWS;
 
-				matrBVector.s0 = b[global_x * threadCalcUnits + LOCALWS * i * widthB + widthB * shiftInY];
-				matrBVector.s1 = b[global_x * threadCalcUnits + LOCALWS * i * widthB + 1 + widthB * shiftInY];
-				matrBVector.s2 = b[global_x * threadCalcUnits + LOCALWS * i * widthB + 2 + widthB * shiftInY];
-				matrBVector.s3 = b[global_x * threadCalcUnits + LOCALWS * i * widthB + 3 + widthB * shiftInY];
+				matrBVector = vload4(0, &b[global_x * threadCalcUnits + LOCALWS * i * widthB + widthB * shiftInY]);
 
 				locMatrB[local_y][local_x] = matrBVector;
 
