@@ -200,7 +200,7 @@ kernel void matrix_local_custom(global const float* a, global const float* b, gl
 
 ///ThreadCalculateUnits указывает на количество работы(ворк айтемов), выполн€емых одним потоком
 kernel void matrix_vector(global const float* a, global const float* b, global float* c, 
-									int widthA, int widthB, int threadCalcUnits){
+									int widthA, int widthB, int threadCalcUnits){//threadCalcUnits вроде не нужно здесь
 
 		int local_x = get_local_id(0);
 		int local_y = get_local_id(1);
@@ -209,9 +209,14 @@ kernel void matrix_vector(global const float* a, global const float* b, global f
 		int global_y = get_global_id(1);//y координата
 
 
-		local float locMatrA[LOCALWS][LOCALWS];
-		local float locMatrB[LOCALWS][LOCALWS];
+		local float locMatrA[2][2];
+		//local float locMatrB[2][2];
+		local float2 locMatrB[2][2/2];//делим на 2 потому что ширина вектора 2
 
+		//float value = 0.0;
+		//float value1 = 0.0;
+
+		float2 value = 0.0;
 
 		for(int i = 0; i < NUM_OF_SUBMATRIX; i++){
 		
@@ -220,42 +225,63 @@ kernel void matrix_vector(global const float* a, global const float* b, global f
 			locMatrA[local_y][local_x] = a[global_y * widthA + local_x + i*LOCALWS];
 			locMatrA[local_y][local_x + 1] = a[global_y * widthA + local_x + 1 + i*LOCALWS];//помен€ть 1 на iter в цикле
 			
-
+			float2 matrBVector = (float2) (0.0f, 0.0f);
 
 			int shiftInY = 0;
 			if(global_y + 1 <= LOCALWS){
 			
-				locMatrB[local_y][local_x] = b[global_x * 2 + LOCALWS * i * widthB + widthB * global_y];
-				locMatrB[local_y][local_x + 1] = b[global_x * 2 + LOCALWS * i * widthB + 1 + widthB * global_y];
+				//locMatrB[local_y][local_x] = b[global_x * 2 + LOCALWS * i * widthB + widthB * global_y];
+				//locMatrB[local_y][local_x + 1] = b[global_x * 2 + LOCALWS * i * widthB + 1 + widthB * global_y];
+
+				matrBVector.s0 = b[global_x * 2 + LOCALWS * i * widthB + widthB * global_y];
+				matrBVector.s1 = b[global_x * 2 + LOCALWS * i * widthB + 1 + widthB * global_y];
+
+				locMatrB[local_y][local_x] = matrBVector;//ѕќ“≈Ќ÷»јЋ№Ќјя ќЎ»Ѕ ј, потому что лок икс может выйти за пределы 
+				//икс координаты вектора
+
 			}else{
 			
 				///summary: это смещение от 0 в пределах сабматрицы дл€ того чтобы "прыгать" через определенное количество элементов
 				//в других сабматрицах. »щетс€ только дл€ матрицы B
 				
 				shiftInY = (global_y) % LOCALWS;
-				
 
-				locMatrB[local_y][local_x] = b[global_x * 2 + LOCALWS * i * widthB + widthB * shiftInY];
-				locMatrB[local_y][local_x + 1] = b[global_x * 2 + LOCALWS * i * widthB + 1 + widthB * shiftInY];
+				//locMatrB[local_y][local_x] = b[global_x * 2 + LOCALWS * i * widthB + widthB * shiftInY];
+				//locMatrB[local_y][local_x + 1] = b[global_x * 2 + LOCALWS * i * widthB + 1 + widthB * shiftInY];
+
+				matrBVector.s0 = b[global_x * 2 + LOCALWS * i * widthB + widthB * shiftInY];
+				matrBVector.s1 = b[global_x * 2 + LOCALWS * i * widthB + 1 + widthB * shiftInY];
+
+				locMatrB[local_y][local_x] = matrBVector;
 			}
 
 
 
 			barrier(CLK_LOCAL_MEM_FENCE);
 			
-			float value = 0.0;
-			float value1 = 0.0;
+			
 
 			for(int k = 0; k < LOCALWS; k++){
 			
+				//value += locMatrA[local_y][k] * locMatrB[k][local_x];
+				//value1 += locMatrA[local_y][k] * locMatrB[k][local_x + 1];
+
 				value += locMatrA[local_y][k] * locMatrB[k][local_x];
-				value1 += locMatrA[local_y][k] * locMatrB[k][local_x + 1];
 			}
 
-			c[global_x * 2 + global_y * widthB] += value;
-			c[global_x * 2 + 1 + global_y * widthB] += value1;
+			
+			
+			
+			//может попробовать с на вектор float2 помен€ть?
 
-
+			
+			//vstore(value, 0, &temp[0]);
+			
 		}
+
+		//c[global_x * 2 + global_y * widthB] += value;
+		//c[global_x * 2 + 1 + global_y * widthB] += value1;
+		
+		vstore2(value, 0, &c[global_x * 2 + global_y * widthB]);
 
 }
