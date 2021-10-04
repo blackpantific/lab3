@@ -210,9 +210,9 @@ kernel void matrix_vector(global const float* a, global const float* b, global f
 
 
 		local float locMatrA[LOCALWS][LOCALWS];
-		local float4 locMatrB[LOCALWS][LOCALWS/4];//делим на 2 потому что ширина вектора 2
+		local float8 locMatrB[LOCALWS][LOCALWS/8];//делим на 2 потому что ширина вектора 2
 
-		float4 value = 0.0;
+		float8 value = 0.0;
 
 		for(int i = 0; i < NUM_OF_SUBMATRIX; i++){
 		
@@ -225,12 +225,12 @@ kernel void matrix_vector(global const float* a, global const float* b, global f
 					= a[global_y * widthA + local_x * threadCalcUnits + numWorkIter + i*LOCALWS];
 			}
 
-			float4 matrBVector = (float4) (0.0f, 0.0f, 0.0f, 0.0f);
+			float8 matrBVector = (float8) (0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 			int shiftInY = 0;
 			if(global_y + 1 <= LOCALWS){
 
-				matrBVector = vload4(0, &b[global_x * threadCalcUnits + LOCALWS * i * widthB + widthB * global_y]);
+				matrBVector = vload8(0, &b[global_x * threadCalcUnits + LOCALWS * i * widthB + widthB * global_y]);
 
 				locMatrB[local_y][local_x] = matrBVector;//ѕќ“≈Ќ÷»јЋ№Ќјя ќЎ»Ѕ ј, потому что лок икс может выйти за пределы 
 				//икс координаты вектора
@@ -244,7 +244,7 @@ kernel void matrix_vector(global const float* a, global const float* b, global f
 				
 				shiftInY = (global_y) % LOCALWS;
 
-				matrBVector = vload4(0, &b[global_x * threadCalcUnits + LOCALWS * i * widthB + widthB * shiftInY]);
+				matrBVector = vload8(0, &b[global_x * threadCalcUnits + LOCALWS * i * widthB + widthB * shiftInY]);
 
 				locMatrB[local_y][local_x] = matrBVector;
 
@@ -267,6 +267,6 @@ kernel void matrix_vector(global const float* a, global const float* b, global f
 
 		}
 		
-		vstore4(value, 0, &c[global_x * threadCalcUnits + global_y * widthB]);
+		vstore8(value, 0, &c[global_x * threadCalcUnits + global_y * widthB]);
 
 }

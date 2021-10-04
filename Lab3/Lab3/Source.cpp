@@ -61,8 +61,8 @@ cl_mem arg_buffer_b;
 cl_mem arg_buffer_c;
 
 int globalWorkSize = 16;//для больших матриц равно 32
-int localWorkSize = 4;//для больших по 16
-int threadCalculateUnits = 4;//значение не должно быть больше размера local WS
+int localWorkSize = 8;//для больших по 16
+int threadCalculateUnits = 8;//значение не должно быть больше размера local WS
 
 int main()
 {
