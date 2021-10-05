@@ -13,7 +13,7 @@ kernel void matrix_global(global const float* a, global const float* b, global f
 		int global_y = get_global_id(1);//y координата
 
 
-		printf("\nvalue1 = %i", widthA);
+		//printf("\nvalue1 = %i", widthA);
 
 		float value = 0.0;
 
@@ -32,8 +32,4 @@ kernel void matrix_local(global const float* a, global const float* b, global fl
 
 		int local_x = get_local_id(0);
 		int local_y = get_local_id(1);
-
-
-
-
 }

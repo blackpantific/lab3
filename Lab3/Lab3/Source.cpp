@@ -30,6 +30,8 @@ cl_device_id InformationAboutDevice(
 	cl_platform_id* platformID,
 	int numberOfDevice);
 
+void write_matrix_to_file();
+
 
 int numberOfDevice = 0;//by default
 string pathInputFile = "C:\\Users\\black\\Desktop\\matrix.txt";
@@ -58,7 +60,7 @@ cl_mem arg_buffer_a;
 cl_mem arg_buffer_b;
 cl_mem arg_buffer_c;
 
-int globalWorkSize = 4;//для больших матриц равно 32
+int globalWorkSize = 512;//для больших матриц равно 32
 int localWorkSize = 2;//для больших по 16
 
 int main()
@@ -204,10 +206,10 @@ int main()
 	}
 
 
-	for (size_t i = 0; i < NKM[0] * NKM[2]; i++)
+	/*for (size_t i = 0; i < NKM[0] * NKM[2]; i++)
 	{
 		printf("\nc[%i] = %f", i, resultMatrix[i]);
-	}
+	}*/
 
 
 	end_time = omp_get_wtime();
@@ -222,12 +224,72 @@ int main()
 	printf("\nTime: %f\t%f \n", nanoSeconds / 1000000.0, timeSingle * 1000);
 
 
-
+	write_matrix_to_file();
 
 
 
 
 	return 0;
+}
+
+void write_matrix_to_file() {
+
+	// WRITE RESULT MATRIX TO FILE
+	int numbersToRemoveOnY = NKM[2] - NKMBase[2];
+	int numbersToRemoveOnX = NKM[0] - NKMBase[0];
+	//printf("%d", numbersToRemoveOnY);
+	//printf("%d", numbersToRemoveOnX);
+
+	auto matrix1Rows = NKM[2];
+	auto matrix1Columns = NKM[1];
+	auto matrix2Rows = NKM[1];
+	auto matrix2Columns = NKM[0];
+
+	vector<char> outputData;
+
+	string tmp = to_string(NKMBase[0]);
+	char const* N = tmp.c_str();
+
+	string tmp1 = to_string(NKMBase[2]);
+	char const* M = tmp1.c_str();
+
+	outputData.insert(outputData.end(), N, N + strlen(N));
+	outputData.push_back(' ');
+	outputData.insert(outputData.end(), M, M + strlen(M));
+	outputData.push_back('\r');
+	outputData.push_back('\n');
+
+	int increment = 0;
+	for (size_t i = 0; i < matrix1Rows; i++)//мнимые циклы
+	{
+		for (size_t j = 0; j < matrix2Columns; j++)
+		{
+			char* char_arr;
+			string str_obj(to_string(resultMatrix[increment]));
+			char_arr = &str_obj[0];
+
+
+			outputData.insert(outputData.end(), char_arr, char_arr + strlen(char_arr));
+			outputData.push_back(' ');
+
+			increment++;
+		}
+		//increment += numbersToRemoveOnX;
+		outputData.pop_back();
+		outputData.push_back('\r');
+		outputData.push_back('\n');
+
+	}
+	outputData.pop_back();
+	outputData.pop_back();
+
+	char* outputArray = &outputData[0];
+
+	fstream bin("C:\\Users\\black\\Desktop\\matrixResult.txt", ios::out | ios::binary);
+	bin.write(outputArray, sizeof(char) * outputData.size());
+	bin.close();
+
+
 }
 
 
