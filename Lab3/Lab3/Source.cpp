@@ -30,12 +30,17 @@ cl_device_id InformationAboutDevice(
 	cl_platform_id* platformID,
 	int numberOfDevice);
 
+void DeviceInfo(cl_device_id deviceID);
+
 void write_matrix_to_file();
+
+void free_openCL();
 
 
 int numberOfDevice = 0;//by default
 string pathInputFile = "C:\\Users\\black\\Desktop\\matrix.txt";
 string pathOutputFile = "C:\\Users\\black\\Desktop\\matrixResult.txt";
+int numberOfRealization = 0;//by default
 
 int NKM[3] = { 0,0,0 };
 int NKMBase[3] = { 0,0,0 };//до добавления дополнительных нулей
@@ -55,172 +60,341 @@ cl_kernel kernel = NULL;
 char* buf = NULL;
 const char* buf_p;
 size_t sizeBuf;
+cl_event ourEvent = 0;
 
 cl_mem arg_buffer_a;
 cl_mem arg_buffer_b;
 cl_mem arg_buffer_c;
 
-int globalWorkSize = 16;//для больших матриц равно 32
-int localWorkSize = 8;//для больших по 16
+int globalWorkSize = 512;//для больших матриц равно 32
+int localWorkSize = 32;//для больших по 16
 int threadCalculateUnits = 8;//значение не должно быть больше размера local WS
 
-int main()
+int main(int argc, char** argv)
 {
-	get_matrixs_from_file_v2(pathInputFile, NKM, matrix1, matrix2, resultMatrix, globalWorkSize);
+	//numberOfDevice = atoi(argv[1]);//by default
+	//pathInputFile = argv[2];
+	//pathOutputFile = argv[3];
+	//numberOfRealization = atoi(argv[4]);
 
-	deviceID = InformationAboutDevice(&platformID, numberOfDevice);
 
-	cl_context_properties properties[3] = { CL_CONTEXT_PLATFORM , (cl_context_properties)platformID, 0 };
+	try {
 
-	context = clCreateContext(properties, 1, &deviceID, NULL, NULL, &status);
-	if (!context)
-	{
-		throw "Error: Failed to create a compute context!\n";
+	if (numberOfRealization > 3 || numberOfRealization < 1) {
+		throw "Wrong realization number!";
 	}
 
-	get_kernel_code_from_file();
+		get_matrixs_from_file_v2(pathInputFile, NKM, matrix1, matrix2, resultMatrix, globalWorkSize);
 
-	queue = clCreateCommandQueue(context, deviceID, CL_QUEUE_PROFILING_ENABLE, &status);
-	if (!queue)
-	{
-		throw "Error: Failed to create a queue!\n";
+		deviceID = InformationAboutDevice(&platformID, numberOfDevice);
+
+		DeviceInfo(deviceID);
+
+		cl_context_properties properties[3] = { CL_CONTEXT_PLATFORM , (cl_context_properties)platformID, 0 };
+
+		context = clCreateContext(properties, 1, &deviceID, NULL, NULL, &status);
+		if (!context)
+		{
+			throw "Error: Failed to create a compute context!\n";
+		}
+
+		get_kernel_code_from_file();
+
+		queue = clCreateCommandQueue(context, deviceID, CL_QUEUE_PROFILING_ENABLE, &status);
+		if (!queue)
+		{
+			throw "Error: Failed to create a queue!\n";
+		}
+
+		program = clCreateProgramWithSource(context, 1, &buf_p, &sizeBuf, &status);
+		if (!program)
+		{
+			throw "Error: Failed to create a program!\n";
+		}
+
+		int numOfSubmatrixes = globalWorkSize / localWorkSize;
+
+		const string param_s = "-D LOCALWS=" + to_string(localWorkSize)
+			+ " -D NUM_OF_SUBMATRIX=" + to_string(numOfSubmatrixes) + " -D THREAD_CALC_UNITS=" + to_string(threadCalculateUnits);//"-D COLSROWS=2 -D PSG=2";
+		int size = param_s.size();
+		char* parameters = new char[size + 1];
+		strcpy_s(parameters, size + 1, param_s.c_str());
+
+		status = clBuildProgram(program, 1, &deviceID, parameters, NULL, NULL);
+
+		status = clGetProgramBuildInfo(program, deviceID, CL_PROGRAM_BUILD_LOG, NULL, NULL, &param_value);
+
+		char* log = NULL;
+		if (param_value != 0)
+		{
+			log = (char*)malloc(sizeof(char));
+			status = clGetProgramBuildInfo(program, deviceID, CL_PROGRAM_BUILD_LOG, param_value, log, NULL);
+			printf("\n%s", log);
+		}
+		if (status != CL_SUCCESS)
+		{
+			throw "Error: Failed to build a program!\n";
+		}
+
+		if (numberOfRealization == 1) {
+			kernel = clCreateKernel(program, "matrix_global", &status);//ошибка обнаруживается тут
+			if (!kernel || status != CL_SUCCESS)
+			{
+				throw "Error: Failed to create compute kernel!\n";
+			}
+		}
+		else if (numberOfRealization == 2) {
+			kernel = clCreateKernel(program, "matrix_local", &status);//ошибка обнаруживается тут
+			if (!kernel || status != CL_SUCCESS)
+			{
+				throw "Error: Failed to create compute kernel!\n";
+			}
+		}
+		else if (numberOfRealization == 3) {
+			kernel = clCreateKernel(program, "matrix_vector", &status);//ошибка обнаруживается тут
+			if (!kernel || status != CL_SUCCESS)
+			{
+				throw "Error: Failed to create compute kernel!\n";
+			}
+		}
+
+		
+
+		double start_time, end_time;
+
+		start_time = omp_get_wtime();//отсчет времени от начала передачи данных с хоста на девайс
+
+		/// <summary>
+		/// Буффер находится на девайсе, поэтому передача данных с хоста на девайс выполняется уже
+		/// в функции clEnqueueWriteBuffer
+		/// </summary>
+		arg_buffer_a = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(float) * NKM[1] * NKM[2], NULL, &status);
+
+		status = clEnqueueWriteBuffer(queue, arg_buffer_a, CL_FALSE, 0, sizeof(float) * NKM[1] * NKM[2],
+			matrix1, 0, NULL, NULL);
+
+		arg_buffer_b = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(float) * NKM[0] * NKM[1], NULL, &status);
+
+		status = clEnqueueWriteBuffer(queue, arg_buffer_b, CL_FALSE, 0, sizeof(float) * NKM[0] * NKM[1],
+			matrix2, 0, NULL, NULL);
+
+		arg_buffer_c = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * NKM[0] * NKM[2], NULL, &status);
+
+		status = clEnqueueWriteBuffer(queue, arg_buffer_c, CL_FALSE, 0, sizeof(float) * NKM[0] * NKM[2],
+			resultMatrix, 0, NULL, NULL);
+		if (status != CL_SUCCESS)
+		{
+			throw "Error: Failed in clEnqueueWriteBuffer!\n";
+		}
+
+
+		auto widthA = NKM[1];
+		auto widthB = NKM[0];
+		status = clSetKernelArg(kernel, 0, sizeof(cl_mem), &arg_buffer_a);
+		status |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &arg_buffer_b);
+		status |= clSetKernelArg(kernel, 2, sizeof(cl_mem), &arg_buffer_c);
+		status |= clSetKernelArg(kernel, 3, sizeof(int), &widthA);
+		status |= clSetKernelArg(kernel, 4, sizeof(int), &widthB);
+		status |= clSetKernelArg(kernel, 5, sizeof(int), &threadCalculateUnits);
+		if (status != CL_SUCCESS)
+		{
+			throw "Error: Failed in clSetKernelArg!\n";
+		}
+
+
+		size_t dimentions = 2;
+		size_t global_work_size[2];
+
+
+		if (numberOfRealization == 1) {
+			global_work_size[0] = NKM[2];
+			global_work_size[1] = NKM[0];
+
+			status = clEnqueueNDRangeKernel(queue, kernel, dimentions, NULL, global_work_size, NULL, 0,
+				NULL, &ourEvent);
+		}
+		if (numberOfRealization == 2) {
+			global_work_size[0] = NKM[2];
+			global_work_size[1] = NKM[0];
+
+
+			size_t local_work_size[2];
+
+			local_work_size[0] = localWorkSize;
+			local_work_size[1] = localWorkSize;
+
+			status = clEnqueueNDRangeKernel(queue, kernel, dimentions, NULL, global_work_size, local_work_size, 0,
+				NULL, &ourEvent);
+		}
+		if (numberOfRealization == 3) {
+			global_work_size[0] = NKM[2] / threadCalculateUnits;//эквивалентно NKM[2] / 2
+			global_work_size[1] = NKM[0];
+
+
+			size_t local_work_size[2];
+
+			local_work_size[0] = localWorkSize / threadCalculateUnits;//эквивалентно localWorkSize / 2
+			local_work_size[1] = localWorkSize;
+
+
+			status = clEnqueueNDRangeKernel(queue, kernel, dimentions, NULL, global_work_size, local_work_size, 0,
+				NULL, &ourEvent);
+		}
+
+		
+		if (status != CL_SUCCESS)
+		{
+			throw "Error: Failed in clEnqueueNDRangeKernel!\n";
+		}
+
+		/// <summary>
+		/// В данной функции мы получаем данные с девайса на хост, поэтому после этой функции мы заканчиваем
+		/// подсчет общего времени выполнения
+		/// </summary>
+		status = clEnqueueReadBuffer(queue, arg_buffer_c, CL_TRUE, 0,
+			sizeof(float) * NKM[0] * NKM[2], resultMatrix, 0, NULL, NULL);//самый последний ReadBuffer должен быть синхронным(CL_TRUE)
+		if (status != CL_SUCCESS)
+		{
+			throw "Error: Failed in clEnqueueReadBuffer!\n";
+		}
+
+
+		for (size_t i = 0; i < NKM[0] * NKM[2]; i++)
+		{
+			//printf("\nc[%i] = %f", i, resultMatrix[i]);
+		}
+
+
+		end_time = omp_get_wtime();
+		auto timeSingle = end_time - start_time;
+
+		cl_ulong gstart, gend;
+
+		status = clGetEventProfilingInfo(ourEvent, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &gstart, NULL);
+		status = clGetEventProfilingInfo(ourEvent, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &gend, NULL);
+
+		double nanoSeconds = gend - gstart;
+		printf("\nTime: %f\t%f \n", nanoSeconds / 1000000.0, timeSingle * 1000);
+
+
+		write_matrix_to_file();
+
+		free_openCL();
+
+		free(matrix1);
+		free(matrix2);
+		free(resultMatrix);
+		free(buf);
 	}
-
-	program = clCreateProgramWithSource(context, 1, &buf_p, &sizeBuf, &status);
-	if (!program)
+	catch (const char* msg)
 	{
-		throw "Error: Failed to create a program!\n";
+		std::cout << msg << std::endl;
+		if (buf != NULL)
+			delete[] buf;
+		if (matrix1 != NULL)
+			free(matrix1);
+		if (matrix2 != NULL)
+			free(matrix2);
+		if (resultMatrix != NULL)
+			free(resultMatrix);
+
+		free_openCL();
+
+		return 1;
 	}
-
-	int numOfSubmatrixes = globalWorkSize / localWorkSize;
-
-	const string param_s = "-D LOCALWS=" + to_string(localWorkSize) 
-		+ " -D NUM_OF_SUBMATRIX=" + to_string(numOfSubmatrixes) + " -D THREAD_CALC_UNITS=" + to_string(threadCalculateUnits);//"-D COLSROWS=2 -D PSG=2";
-	int size = param_s.size();
-	char* parameters = new char[size + 1];
-	strcpy_s(parameters, size + 1, param_s.c_str());
-
-	status = clBuildProgram(program, 1, &deviceID, parameters, NULL, NULL);
-
-	status = clGetProgramBuildInfo(program, deviceID, CL_PROGRAM_BUILD_LOG, NULL, NULL, &param_value);
-
-	char* log = NULL;
-	if (param_value != 0)
+	catch (...)
 	{
-		log = (char*)malloc(sizeof(char));
-		status = clGetProgramBuildInfo(program, deviceID, CL_PROGRAM_BUILD_LOG, param_value, log, NULL);
-		printf("\n%s", log);
+		std::cout << "Unknown error" << std::endl;
+		if (buf != NULL)
+			delete[] buf;
+		if (matrix1 != NULL)
+			free(matrix1);
+		if (matrix2 != NULL)
+			free(matrix2);
+		if (resultMatrix != NULL)
+			free(resultMatrix);
+
+		free_openCL();
+
+		return 1;
 	}
-	if (status != CL_SUCCESS)
-	{
-		throw "Error: Failed to build a program!\n";
-	}
-
-
-	kernel = clCreateKernel(program, "matrix_vector", &status);//ошибка обнаруживается тут
-	if (!kernel || status != CL_SUCCESS)
-	{
-		throw "Error: Failed to create compute kernel!\n";
-	}
-
-	double start_time, end_time;
-
-	start_time = omp_get_wtime();//отсчет времени от начала передачи данных с хоста на девайс
-
-	/// <summary>
-	/// Буффер находится на девайсе, поэтому передача данных с хоста на девайс выполняется уже
-	/// в функции clEnqueueWriteBuffer
-	/// </summary>
-	arg_buffer_a = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(float) * NKM[1] * NKM[2], NULL, &status);
-
-	status = clEnqueueWriteBuffer(queue, arg_buffer_a, CL_FALSE, 0, sizeof(float) * NKM[1] * NKM[2],
-		matrix1, 0, NULL, NULL);
-
-	arg_buffer_b = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(float) * NKM[0] * NKM[1], NULL, &status);
-
-	status = clEnqueueWriteBuffer(queue, arg_buffer_b, CL_FALSE, 0, sizeof(float) * NKM[0] * NKM[1],
-		matrix2, 0, NULL, NULL);
-
-	arg_buffer_c = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * NKM[0] * NKM[2], NULL, &status);
-
-	status = clEnqueueWriteBuffer(queue, arg_buffer_c, CL_FALSE, 0, sizeof(float) * NKM[0] * NKM[2],
-		resultMatrix, 0, NULL, NULL);
-	if (status != CL_SUCCESS)
-	{
-		throw "Error: Failed in clEnqueueWriteBuffer!\n";
-	}
-
-
-	auto widthA = NKM[1];
-	auto widthB = NKM[0];
-	status = clSetKernelArg(kernel, 0, sizeof(cl_mem), &arg_buffer_a);
-	status |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &arg_buffer_b);
-	status |= clSetKernelArg(kernel, 2, sizeof(cl_mem), &arg_buffer_c);
-	status |= clSetKernelArg(kernel, 3, sizeof(int), &widthA);
-	status |= clSetKernelArg(kernel, 4, sizeof(int), &widthB);
-	status |= clSetKernelArg(kernel, 5, sizeof(int), &threadCalculateUnits);
-	if (status != CL_SUCCESS)
-	{
-		throw "Error: Failed in clSetKernelArg!\n";
-	}
-
-
-	size_t dimentions = 2;
-	size_t global_work_size[2];
-
-	global_work_size[0] = NKM[2] / threadCalculateUnits;//эквивалентно NKM[2] / 2
-	global_work_size[1] = NKM[0];
-
-
-	size_t local_work_size[2];
-
-	local_work_size[0] = localWorkSize / threadCalculateUnits;//эквивалентно localWorkSize / 2
-	local_work_size[1] = localWorkSize;
-
-	cl_event ourEvent = 0;
-
-	status = clEnqueueNDRangeKernel(queue, kernel, dimentions, NULL, global_work_size, local_work_size, 0,
-		NULL, &ourEvent);
-	if (status != CL_SUCCESS)
-	{
-		throw "Error: Failed in clEnqueueNDRangeKernel!\n";
-	}
-
-	/// <summary>
-	/// В данной функции мы получаем данные с девайса на хост, поэтому после этой функции мы заканчиваем
-	/// подсчет общего времени выполнения
-	/// </summary>
-	status = clEnqueueReadBuffer(queue, arg_buffer_c, CL_TRUE, 0,
-		sizeof(float) * NKM[0] * NKM[2], resultMatrix, 0, NULL, NULL);//самый последний ReadBuffer должен быть синхронным(CL_TRUE)
-	if (status != CL_SUCCESS)
-	{
-		throw "Error: Failed in clEnqueueReadBuffer!\n";
-	}
-
-
-	for (size_t i = 0; i < NKM[0] * NKM[2]; i++)
-	{
-		//printf("\nc[%i] = %f", i, resultMatrix[i]);
-	}
-
-
-	end_time = omp_get_wtime();
-	auto timeSingle = end_time - start_time;
-
-	cl_ulong gstart, gend;
-
-	status = clGetEventProfilingInfo(ourEvent, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &gstart, NULL);
-	status = clGetEventProfilingInfo(ourEvent, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &gend, NULL);
-
-	double nanoSeconds = gend - gstart;
-	printf("\nTime: %f\t%f \n", nanoSeconds / 1000000.0, timeSingle * 1000);
-
-
-	write_matrix_to_file();
 
 	return 0;
 }
 
+void DeviceInfo(cl_device_id deviceID) {//вывод инфы в консоль 
+
+	/////////////////////////////////////DEVICE INFO/////////////////////////////////////
+
+	//display chosen device name
+	size_t deviceNameSize;
+	cl_int status = 0;
+	status = clGetDeviceInfo(deviceID, CL_DEVICE_NAME, 0, NULL, &deviceNameSize);
+	char* deviceName = (char*)malloc(deviceNameSize);
+	status = clGetDeviceInfo(deviceID, CL_DEVICE_NAME, deviceNameSize, deviceName, NULL);
+	printf("\nDevice name - %s\n", deviceName);
+
+	//kernel numbers
+	size_t kernelsNumberSize;
+	status = clGetDeviceInfo(deviceID, CL_DEVICE_BUILT_IN_KERNELS, 0, NULL, &kernelsNumberSize);
+	char* kernels = (char*)malloc(kernelsNumberSize);
+	status = clGetDeviceInfo(deviceID, CL_DEVICE_BUILT_IN_KERNELS, kernelsNumberSize, kernels, NULL);
+	//printf("\nCL_DEVICE_BUILT_IN_KERNELS - %s\n", kernels);
+
+	//global cache size 
+	cl_ulong globalCacheSize;
+	status = clGetDeviceInfo(deviceID, CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, sizeof(globalCacheSize), &globalCacheSize, NULL);
+	//printf("\nCL_DEVICE_GLOBAL_MEM_CACHE_SIZE - %llu bytes\n", (unsigned long long)globalCacheSize);
+
+	//global memory size 
+	cl_ulong globalMemSize;
+	status = clGetDeviceInfo(deviceID, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(globalMemSize), &globalMemSize, NULL);
+	//printf("\nCL_DEVICE_GLOBAL_MEM_SIZE - %llu bytes\n", (unsigned long long)globalMemSize);
+
+	//local memory size 
+	cl_ulong localMemSize;
+	status = clGetDeviceInfo(deviceID, CL_DEVICE_LOCAL_MEM_SIZE, sizeof(localMemSize), &localMemSize, NULL);
+	//printf("\nCL_DEVICE_LOCAL_MEM_SIZE - %llu bytes\n", (unsigned long long)localMemSize);
+
+	//CL_DEVICE_MAX_COMPUTE_UNITS 
+	cl_uint numberOfComputeUnits;//количество аппаратных групп видеокарты
+	status = clGetDeviceInfo(deviceID, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(numberOfComputeUnits), &numberOfComputeUnits, NULL);
+	//printf("\nCL_DEVICE_MAX_COMPUTE_UNITS - %u units\n", (unsigned int)numberOfComputeUnits);
+
+	//CL_DEVICE_MAX_WORK_GROUP_SIZE
+	size_t maxWorkGroupElementsCount;
+	status = clGetDeviceInfo(deviceID, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(maxWorkGroupElementsCount), &maxWorkGroupElementsCount, NULL);
+	//printf("\nCL_DEVICE_MAX_WORK_GROUP_SIZE - %u units\n", (unsigned int)maxWorkGroupElementsCount);
+
+	//CL_DEVICE_MAX_WORK_ITEM_SIZES
+	size_t maxWorkItemSize[3];
+	status = clGetDeviceInfo(deviceID, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(maxWorkItemSize), maxWorkItemSize, NULL);
+	//printf("\nCL_DEVICE_MAX_WORK_ITEM_SIZES - %d:%d:%d\n", maxWorkItemSize[0], maxWorkItemSize[1], maxWorkItemSize[2]);
+
+	free(deviceName);
+	free(kernels);
+
+	/////////////////////////////////////END DEVICE INFO/////////////////////////////////////
+}
+
+void free_openCL() {
+
+	if (arg_buffer_a != NULL)
+		clReleaseMemObject(arg_buffer_a);
+	if (arg_buffer_b != NULL)
+		clReleaseMemObject(arg_buffer_b);
+	if (arg_buffer_c != NULL)
+		clReleaseMemObject(arg_buffer_c);
+	if (kernel != NULL)
+		clReleaseKernel(kernel);
+	if (program != NULL)
+		clReleaseProgram(program);
+	if (queue != NULL)
+		clReleaseCommandQueue(queue);
+	if (context != NULL)
+		clReleaseContext(context);
+
+}
 
 void write_matrix_to_file() {
 
