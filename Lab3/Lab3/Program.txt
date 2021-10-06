@@ -12,9 +12,6 @@ kernel void matrix_global(global const float* a, global const float* b, global f
 		int global_x = get_global_id(0);//x координата
 		int global_y = get_global_id(1);//y координата
 
-
-		//printf("\nvalue1 = %i", widthA);
-
 		float value = 0.0;
 
 		for(int i = 0; i < widthA; i++){
@@ -24,7 +21,6 @@ kernel void matrix_global(global const float* a, global const float* b, global f
 		}
 
 		c[global_x + global_y * widthB] = value;
-		//printf("\nvalue = %f", value);
 
 }
 
@@ -37,38 +33,25 @@ kernel void matrix_local(global const float* a, global const float* b, global fl
 		int global_y = get_global_id(1);//y координата
 
 
-		local float locMatrA[LOCALWS][LOCALWS];//заменить 2 на ширину(она же высота) сабматрицы лок группы, т.е. A
-		local float locMatrB[LOCALWS][LOCALWS];//заменить 2 на ширину(она же высота) сабматрицы лок группы, т.е. B
+		local float locMatrA[LOCALWS][LOCALWS];
+		local float locMatrB[LOCALWS][LOCALWS];
 		local float locMatrC[LOCALWS][LOCALWS];
 
-		//printf("\nlocal_x = %i, local_y = %i, global_x = %i, global_y = %i",
-		//local_x,
-		//local_y,
-		//global_x,
-		//global_y);
-
-		for(int i = 0; i < NUM_OF_SUBMATRIX; i++){//2 в данном случае это количество сабплиток умещающихся по ширине всей глобал работы, т.е 4 надо реплейснуть потом на константу. количество сабплиток это ширина итоговой матрицы делить на ширину лок. группы
+		for(int i = 0; i < NUM_OF_SUBMATRIX; i++){
 
 
-			locMatrA[local_y][local_x] = a[global_y * widthA + local_x + i*LOCALWS];//2 тоже поменять на ширину сабматрицы
+			locMatrA[local_y][local_x] = a[global_y * widthA + local_x + i*LOCALWS];
 			int shiftInY = 0;
 			if(global_y + 1 <= LOCALWS){
 			
-				locMatrB[local_y][local_x] = b[global_x + LOCALWS * i * widthB + widthB * global_y];//2 поменять на кол-во строк сабматрицы
+				locMatrB[local_y][local_x] = b[global_x + LOCALWS * i * widthB + widthB * global_y];
 			}else{
-			
-				///summary: это смещение от 0 в пределах сабматрицы для того чтобы "прыгать" через определенное количество элементов
-				//в других сабматрицах. Ищется только для матрицы B
-				
+
 				shiftInY = (global_y) % LOCALWS;
 				
 
-				locMatrB[local_y][local_x] = b[global_x + LOCALWS * i * widthB + widthB * shiftInY];//2 поменять на кол-во строк сабматрицы
-				//if((global_y == 4 || global_y == 5) && (global_x == 0 || global_x == 1)){
-				
-					//printf("\nlocMatrB[%d][%d] = b[%d + LOCALWS * %d * %d + %d * %d] = %f", local_y, local_x, global_x, 
-					//i, widthB, widthB, shiftInY, b[global_x + LOCALWS * i * widthB + widthB * shiftInY]);
-				//}
+				locMatrB[local_y][local_x] = b[global_x + LOCALWS * i * widthB + widthB * shiftInY];
+
 			}
 
 
@@ -86,38 +69,10 @@ kernel void matrix_local(global const float* a, global const float* b, global fl
 			barrier(CLK_LOCAL_MEM_FENCE);
 
 			c[global_x + global_y * widthB] += value;
-
-
-
-			//if((global_y == 0 || global_y == 1) && (global_x == 2 || global_x == 3)){
-				
-				//printf("\nlocMatrB[%i][%i] = %f, i=%i, global_x = %i, global_y = %i, %f",
-				//local_y, 
-				//local_x, 
-				//locMatrB[local_y][local_x],
-				//i,
-				//global_x,
-				//global_y,
-				//b[global_x + 2 * i * widthB + widthB * global_y]);
-				
-			//}
-
-			//if((global_y == 2 || global_y == 3) && (global_x == 2 || global_x == 3)){
-			
-				//printf("\nlocMatrA[%i][%i] = %f, i=%i, global_x = %i, global_y = %i, %f",
-				//local_y, 
-				//local_x, 
-				//locMatrA[local_y][local_x],
-				//i,
-				//global_x,
-				//global_y,
-				//a[global_y * widthA + local_x + i*2]);
-			//}
-
 		}
 }
 
-///ThreadCalculateUnits указывает на количество работы(ворк айтемов), выполняемых одним потоком
+
 kernel void matrix_local_custom(global const float* a, global const float* b, global float* c, 
 									int widthA, int widthB, int threadCalcUnits){
 
@@ -132,16 +87,10 @@ kernel void matrix_local_custom(global const float* a, global const float* b, gl
 		local float locMatrB[LOCALWS][LOCALWS];
 
 		float values[THREAD_CALC_UNITS];
-		//for(int j = 0; j < threadCalcUnits; j++){
-			
-			//values[j] = 0.0;
-		//}
+
 
 		for(int i = 0; i < NUM_OF_SUBMATRIX; i++){
 		
-			
-			
-			//numWorkIter - это итератор работы на 1 тред, то есть 2, 4, 8 элементов выполненной работы на поток
 			for(int numWorkIter = 0; numWorkIter < threadCalcUnits;  numWorkIter++){
 
 				locMatrA[local_y][local_x * threadCalcUnits + numWorkIter] 
@@ -158,9 +107,6 @@ kernel void matrix_local_custom(global const float* a, global const float* b, gl
 				}
 
 			}else{
-			
-				///summary: это смещение от 0 в пределах сабматрицы для того чтобы "прыгать" через определенное количество элементов
-				//в других сабматрицах. Ищется только для матрицы B
 				
 				shiftInY = (global_y) % LOCALWS;
 				
@@ -198,9 +144,8 @@ kernel void matrix_local_custom(global const float* a, global const float* b, gl
 
 }
 
-///ThreadCalculateUnits указывает на количество работы(ворк айтемов), выполняемых одним потоком
 kernel void matrix_vector(global const float* a, global const float* b, global float* c, 
-									int widthA, int widthB, int threadCalcUnits){//threadCalcUnits вроде не нужно здесь
+									int widthA, int widthB, int threadCalcUnits){
 
 		int local_x = get_local_id(0);
 		int local_y = get_local_id(1);
@@ -210,15 +155,12 @@ kernel void matrix_vector(global const float* a, global const float* b, global f
 
 
 		local float locMatrA[LOCALWS][LOCALWS];
-		local float8 locMatrB[LOCALWS][LOCALWS/8];//делим на 2 потому что ширина вектора 2
+		local float8 locMatrB[LOCALWS][LOCALWS/8];
 
 		float8 value = 0.0;
 
 		for(int i = 0; i < NUM_OF_SUBMATRIX; i++){
-		
-			//доработать нормальный цикл
 
-			//numWorkIter - это итератор работы на 1 тред, то есть 2, 4, 8 элементов выполненной работы на поток
 			for(int numWorkIter = 0; numWorkIter < threadCalcUnits;  numWorkIter++){
 
 				locMatrA[local_y][local_x * threadCalcUnits + numWorkIter] 
@@ -232,23 +174,16 @@ kernel void matrix_vector(global const float* a, global const float* b, global f
 
 				matrBVector = vload8(0, &b[global_x * threadCalcUnits + LOCALWS * i * widthB + widthB * global_y]);
 
-				locMatrB[local_y][local_x] = matrBVector;//ПОТЕНЦИАЛЬНАЯ ОШИБКА, потому что лок икс может выйти за пределы 
-				//икс координаты вектора
-
-				//тут используем как раз locMatrB[local_y][local_x], а не locMatrB[local_y][local_x * 2], потому что матрица B состоит из векторов
-
+				locMatrB[local_y][local_x] = matrBVector;
+				
 			}else{
 			
-				///summary: это смещение от 0 в пределах сабматрицы для того чтобы "прыгать" через определенное количество элементов
-				//в других сабматрицах. Ищется только для матрицы B
-				
 				shiftInY = (global_y) % LOCALWS;
 
 				matrBVector = vload8(0, &b[global_x * threadCalcUnits + LOCALWS * i * widthB + widthB * shiftInY]);
 
 				locMatrB[local_y][local_x] = matrBVector;
 
-				//тут используем как раз locMatrB[local_y][local_x], а не locMatrB[local_y][local_x * 2], потому что матрица B состоит из векторов
 			}
 
 
@@ -258,12 +193,7 @@ kernel void matrix_vector(global const float* a, global const float* b, global f
 			for(int k = 0; k < LOCALWS; k++){
 
 				value += locMatrA[local_y][k] * locMatrB[k][local_x];
-
-				//тут вроде как тоже можно просто locMatrB[k][local_x], а не local_x * 2
 			}
-
-			
-			//может попробовать с на вектор float2 поменять?
 
 		}
 		
