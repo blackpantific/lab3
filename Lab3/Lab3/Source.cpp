@@ -38,8 +38,8 @@ void free_openCL();
 
 
 int numberOfDevice = 0;//by default
-string pathInputFile = "C:\\Users\\black\\Desktop\\matrix.txt";
-string pathOutputFile = "C:\\Users\\black\\Desktop\\matrixResult.txt";
+string pathInputFile = "";//"C:\\Users\\black\\Desktop\\matrix.txt";
+string pathOutputFile = "";//"C:\\Users\\black\\Desktop\\matrixResult.txt";
 int numberOfRealization = 2;
 
 int NKM[3] = { 0,0,0 };
@@ -72,10 +72,10 @@ int threadCalculateUnits = 8;//значение не должно быть больше размера local WS
 
 int main(int argc, char** argv)
 {
-	//numberOfDevice = atoi(argv[1]);//by default
-	//pathInputFile = argv[2];
-	//pathOutputFile = argv[3];
-	//numberOfRealization = atoi(argv[4]);
+	numberOfDevice = atoi(argv[1]);//by default
+	pathInputFile = argv[2];
+	pathOutputFile = argv[3];
+	numberOfRealization = atoi(argv[4]);
 
 
 	try {
@@ -449,7 +449,7 @@ void write_matrix_to_file() {
 
 	char* outputArray = &outputData[0];
 
-	fstream bin("C:\\Users\\black\\Desktop\\matrixResult.txt", ios::out | ios::binary);
+	fstream bin(pathOutputFile, ios::out | ios::binary);
 	bin.write(outputArray, sizeof(char) * outputData.size());
 	bin.close();
 	
