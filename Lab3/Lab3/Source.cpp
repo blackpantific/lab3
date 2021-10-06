@@ -40,7 +40,7 @@ void free_openCL();
 int numberOfDevice = 0;//by default
 string pathInputFile = "C:\\Users\\black\\Desktop\\matrix.txt";
 string pathOutputFile = "C:\\Users\\black\\Desktop\\matrixResult.txt";
-int numberOfRealization = 0;//by default
+int numberOfRealization = 2;
 
 int NKM[3] = { 0,0,0 };
 int NKMBase[3] = { 0,0,0 };//до добавления дополнительных нулей
@@ -66,7 +66,7 @@ cl_mem arg_buffer_a;
 cl_mem arg_buffer_b;
 cl_mem arg_buffer_c;
 
-int globalWorkSize = 512;//для больших матриц равно 32
+int globalWorkSize = 0;//для больших матриц равно 512
 int localWorkSize = 32;//для больших по 16
 int threadCalculateUnits = 8;//значение не должно быть больше размера local WS
 
@@ -424,9 +424,9 @@ void write_matrix_to_file() {
 	outputData.push_back('\n');
 
 	int increment = 0;
-	for (size_t i = 0; i < matrix1Rows; i++)//мнимые циклы
+	for (size_t i = 0; i < matrix1Rows - numbersToRemoveOnY; i++)//мнимые циклы
 	{
-		for (size_t j = 0; j < matrix2Columns; j++)
+		for (size_t j = 0; j < matrix2Columns - numbersToRemoveOnX; j++)
 		{
 			char* char_arr;
 			string str_obj(to_string(resultMatrix[increment]));
@@ -438,7 +438,7 @@ void write_matrix_to_file() {
 
 			increment++;
 		}
-		//increment += numbersToRemoveOnX;
+		increment += numbersToRemoveOnX;
 		outputData.pop_back();
 		outputData.push_back('\r');
 		outputData.push_back('\n');
@@ -472,7 +472,6 @@ void get_kernel_code_from_file() {
 
 void get_matrixs_from_file_v2(string input_file_path, int NKM[], float*& matrix1, float*& matrix2, float*& resultMatrix, int multiplicity)
 {
-	int multiplicity1 = 4;
 	float** table1FromFile = NULL;
 	float** table2FromFile = NULL;
 
@@ -535,6 +534,22 @@ void get_matrixs_from_file_v2(string input_file_path, int NKM[], float*& matrix1
 	NKMBase[2] = NKM[2];
 	NKMBase[1] = NKM[1];
 	NKMBase[0] = NKM[0];
+
+	int max = NKMBase[0];
+
+	multiplicity = 32;
+
+	for (int i = 1; i < 3; i++)
+		if (NKMBase[i] > max)
+			max = NKMBase[i];
+
+	if ((max % multiplicity) != 0) {
+		auto addSum = multiplicity - (max % multiplicity);
+		max += addSum;
+	}
+
+	multiplicity = max;
+	globalWorkSize = multiplicity;
 
 
 	auto matrix1RowsFromFile = NKM[2];//M
